@@ -1,0 +1,4 @@
+Aprendizagem ativa envolve recuperar, explicar e aplicar conhecimentos, em vez de apenas reler respostas.
+O método socrático utiliza perguntas para examinar pressupostos, identificar lacunas e desenvolver raciocínio.
+Uma pista gradual oferece apoio sem substituir a resolução do estudante.
+RAG (geração aumentada por recuperação) consulta uma base de conhecimento antes de formular uma resposta.
