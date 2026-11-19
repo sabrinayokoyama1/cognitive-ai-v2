@@ -7,7 +7,7 @@ st.set_page_config(page_title="Cognitive AI", page_icon="🐙", layout="centered
 st.markdown("<style>.stApp{background:#090909;color:#f5f5f5}h1{color:#52d9c4}</style>", unsafe_allow_html=True)
 st.title("COGNITIVE AI")
 st.caption("Think twice. Ask why.")
-st.write("Aprenda com perguntas, pistas e reflexão — não apenas respostas prontas.")
+st.write("Aprenda com perguntas, pistas e reflexão.")
 try:
     if "OPENAI_API_KEY" in st.secrets:
         os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
