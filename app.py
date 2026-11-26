@@ -18,7 +18,7 @@ DEFAULT_KNOWLEDGE = ROOT / "knowledge.txt"
 
 st.set_page_config(
     page_title="Cognitive AI",
-    page_icon="🐙",
+    page_icon=LOGO,
     layout="wide",
     initial_sidebar_state="collapsed",
 )
