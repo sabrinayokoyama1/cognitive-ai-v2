@@ -1,18 +1,20 @@
-# Cognitive AI V2
+# Cognitive AI
 
-*Think twice. Ask why.*
+Tutor socrático com busca de trechos por TF-IDF e respostas geradas por GPT.
 
-Assistente educacional socrático com **GPT + RAG**, dividido em duas partes.
+## Aplicação web
 
-1. `cognitive_rag.ipynb` contém o código de recuperação de trechos e geração de respostas. A célula de exportação atualiza o `rag_engine.py`, usado pela interface.
-2. `app.py` é a aplicação web em Streamlit, com chat e upload de arquivos `.txt`.
-
-Arquivos de apoio incluem `rag_engine.py`, `knowledge.txt`, `requirements.txt` e `.gitignore`.
-
-## Executar localmente
-
-Configure a variável de ambiente `OPENAI_API_KEY` e mantenha a chave fora do Git. Depois, execute os comandos abaixo.
+Execute em um ambiente remoto com:
 
 ```bash
 pip install -r requirements.txt
 streamlit run app.py
+```
+
+A interface usa `assets/logo-cognitive.svg`, uma reprodução vetorial provisória baseada na identidade visual compartilhada, e `assets/styles.css` para o tema responsivo.
+
+## Publicação
+
+No Streamlit Community Cloud, selecione o repositório `sabrinayokoyama1/cognitive-ai-v2`, a branch `main` e o arquivo `app.py`. Para ativar as respostas por GPT, configure `OPENAI_API_KEY` nos Secrets da aplicação. Nunca adicione a chave ao repositório. A API da OpenAI pode gerar custos de uso.
+
+O arquivo `cognitive_rag.ipynb` preserva o desenvolvimento em notebook. A base padrão está em `knowledge.txt`; a interface também aceita um arquivo `.txt` enviado pelo usuário.

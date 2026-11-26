@@ -1,44 +1,155 @@
+"""Interface web do tutor Cognitive AI."""
+
+import base64
 import os
 from pathlib import Path
+
 import streamlit as st
+
 from rag_engine import answer
 
-st.set_page_config(page_title="Cognitive AI", page_icon="🐙", layout="centered")
-st.markdown("<style>.stApp{background:#090909;color:#f5f5f5}h1{color:#52d9c4}</style>", unsafe_allow_html=True)
-st.title("COGNITIVE AI")
-st.caption("Think twice. Ask why.")
-st.write("Aprenda com perguntas, pistas e reflexão.")
+
+ROOT = Path(__file__).parent
+LOGO = ROOT / "assets" / "logo-cognitive.svg"
+STYLES = ROOT / "assets" / "styles.css"
+DEFAULT_KNOWLEDGE = ROOT / "knowledge.txt"
+
+st.set_page_config(
+    page_title="Cognitive AI",
+    page_icon="🐙",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+st.markdown(f"<style>{STYLES.read_text(encoding='utf-8')}</style>", unsafe_allow_html=True)
+logo_uri = "data:image/svg+xml;base64," + base64.b64encode(LOGO.read_bytes()).decode("ascii")
+
 try:
-    if "OPENAI_API_KEY" in st.secrets:
-        os.environ["OPENAI_API_KEY"] = st.secrets["OPENAI_API_KEY"]
-except (FileNotFoundError, KeyError):
-    pass
-uploaded = st.file_uploader("Base de conhecimento (.txt, UTF-8)", type=["txt"])
-document = uploaded.getvalue().decode("utf-8") if uploaded else Path(__file__).with_name("knowledge.txt").read_text(encoding="utf-8")
+    secret_key = st.secrets.get("OPENAI_API_KEY", "")
+except FileNotFoundError:
+    secret_key = ""
+if secret_key:
+    os.environ["OPENAI_API_KEY"] = secret_key
+api_ready = bool(os.getenv("OPENAI_API_KEY"))
+
+with st.sidebar:
+    st.markdown(
+        f'<div class="cognitive-sidebar-brand"><img src="{logo_uri}" alt="Logo Cognitive AI">'
+        '<strong>Cognitive <span>AI</span></strong></div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown("### Base de conhecimento")
+    uploaded = st.file_uploader("Enviar texto para consulta", type=["txt"])
+    st.caption("Use um arquivo .txt em UTF-8. Sem arquivo, a base padrão será utilizada.")
+    status_class = "ready" if api_ready else ""
+    status_text = "GPT pronto para responder" if api_ready else "Chave da OpenAI pendente"
+    st.markdown(
+        f'<div class="cognitive-status {status_class}">{status_text}</div>',
+        unsafe_allow_html=True,
+    )
+    if not api_ready:
+        st.caption("Configure OPENAI_API_KEY nos Secrets da aplicação publicada.")
+
+document = (
+    uploaded.getvalue().decode("utf-8", errors="replace")
+    if uploaded
+    else DEFAULT_KNOWLEDGE.read_text(encoding="utf-8")
+)
+
+st.markdown(
+    f"""
+    <div class="cognitive-hero">
+      <img class="cognitive-hero__logo" src="{logo_uri}"
+           alt="Logo Cognitive AI, polvo verde-água com olhos roxos">
+      <div class="cognitive-hero__body">
+        <span class="cognitive-eyebrow">Tutor socrático com RAG</span>
+        <h1>Cognitive <span>AI</span></h1>
+        <p class="cognitive-slogan">Think twice. <strong>Ask why.</strong></p>
+        <p class="cognitive-hero__description">Uma conversa para explorar ideias,
+        construir respostas e pensar no próximo passo.</p>
+      </div>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)
+
 if "messages" not in st.session_state:
     st.session_state.messages = []
-if st.button("Nova conversa"):
-    st.session_state.messages = []
-    st.rerun()
+
+section, reset = st.columns([3, 1], vertical_alignment="bottom")
+with section:
+    st.markdown(
+        '<div class="cognitive-section"><h2>Sua conversa</h2>'
+        '<p>Pergunte, tente e avance no seu ritmo</p></div>',
+        unsafe_allow_html=True,
+    )
+with reset:
+    if st.button("Nova conversa", use_container_width=True):
+        st.session_state.messages = []
+        st.rerun()
+
+
+def show_sources(matches):
+    """Mantém os trechos consultados junto da resposta após reexecuções."""
+    with st.expander("Trechos consultados"):
+        if matches:
+            for index, (passage, score) in enumerate(matches, 1):
+                st.markdown(f"**Trecho {index}** · relevância {score:.2f}")
+                st.write(passage)
+        else:
+            st.write("Nenhum trecho relevante encontrado.")
+
+
 for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
+    avatar = str(LOGO) if message["role"] == "assistant" else None
+    with st.chat_message(message["role"], avatar=avatar):
         st.markdown(message["content"])
-if prompt := st.chat_input("O que você quer compreender hoje?"):
+        if message["role"] == "assistant":
+            show_sources(message.get("matches", []))
+
+suggestion = None
+welcome = st.empty()
+if not st.session_state.messages:
+    with welcome.container():
+        st.markdown(
+            '<div class="cognitive-welcome">'
+            '<div class="cognitive-welcome__icon">✦</div>'
+            '<h3>Por onde começamos?</h3>'
+            '<p>Traga uma dúvida ou escolha uma pergunta. O tutor oferece pistas e '
+            'perguntas para ajudar você a desenvolver seu raciocínio.</p>'
+            '</div><p class="cognitive-suggestion-label">Experimente perguntar</p>',
+            unsafe_allow_html=True,
+        )
+        first, second = st.columns(2)
+        with first:
+            if st.button("O que é aprendizagem ativa?", use_container_width=True):
+                suggestion = "O que é aprendizagem ativa?"
+        with second:
+            if st.button("Como funcionam as pistas graduais?", use_container_width=True):
+                suggestion = "Como funcionam as pistas graduais?"
+
+typed_prompt = st.chat_input("Escreva sua pergunta ou tentativa...")
+prompt = suggestion or typed_prompt
+
+if prompt:
+    welcome.empty()
     previous = list(st.session_state.messages)
-    st.session_state.messages.append({"role":"user", "content":prompt})
+    st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
-    with st.chat_message("assistant"):
-        try:
-            reply, matches = answer(prompt, document, history=previous)
-            st.markdown(reply)
-            with st.expander("Trechos consultados"):
-                if matches:
-                    for i, (passage, score) in enumerate(matches, 1):
-                        st.write(f"Trecho {i} (relevância {score:.2f}): {passage}")
-                else:
-                    st.write("Nenhum trecho relevante encontrado.")
-        except Exception as exc:
-            st.error(f"Não foi possível consultar o GPT: {exc}")
+    with st.chat_message("assistant", avatar=str(LOGO)):
+        if not api_ready:
+            st.warning("Para conversar com o GPT, configure OPENAI_API_KEY nos Secrets da aplicação.")
         else:
-            st.session_state.messages.append({"role":"assistant", "content":reply})
+            with st.spinner("Preparando uma orientação..."):
+                try:
+                    reply, matches = answer(prompt, document, history=previous)
+                except Exception:
+                    st.error("Não foi possível gerar a orientação agora. Verifique a conexão e a configuração da API.")
+                else:
+                    reply = reply or "Não foi possível formular uma orientação para esta pergunta."
+                    st.markdown(reply)
+                    show_sources(matches)
+                    st.session_state.messages.append(
+                        {"role": "assistant", "content": reply, "matches": matches}
+                    )
