@@ -6,6 +6,7 @@ from pathlib import Path
 
 import streamlit as st
 
+from document_loader import extract_document
 from rag_engine import answer
 
 
@@ -39,10 +40,11 @@ with st.sidebar:
         unsafe_allow_html=True,
     )
     st.markdown("### Base de conhecimento")
-    uploaded = st.file_uploader("Enviar texto para consulta", type=["txt"])
-    st.caption("Use um arquivo .txt em UTF-8. Sem arquivo, a base padrão será utilizada.")
+    uploaded = st.file_uploader("Enviar material para consulta", type=["txt", "pdf"])
+    st.caption("Aceita TXT em UTF-8 e PDF com texto selecionável, até 20 MB. Sem arquivo, usa a base padrão.")
+    st.caption("Ao perguntar, trechos do material podem ser enviados à OpenAI para gerar a resposta.")
     status_class = "ready" if api_ready else ""
-    status_text = "GPT pronto para responder" if api_ready else "Chave da OpenAI pendente"
+    status_text = "Chave da OpenAI configurada" if api_ready else "Chave da OpenAI pendente"
     st.markdown(
         f'<div class="cognitive-status {status_class}">{status_text}</div>',
         unsafe_allow_html=True,
@@ -50,11 +52,15 @@ with st.sidebar:
     if not api_ready:
         st.caption("Configure OPENAI_API_KEY nos Secrets da aplicação publicada.")
 
-document = (
-    uploaded.getvalue().decode("utf-8", errors="replace")
-    if uploaded
-    else DEFAULT_KNOWLEDGE.read_text(encoding="utf-8")
-)
+upload_error = None
+if uploaded:
+    try:
+        document = extract_document(uploaded.name, uploaded.getvalue())
+    except ValueError as exc:
+        upload_error = str(exc)
+        document = ""
+else:
+    document = DEFAULT_KNOWLEDGE.read_text(encoding="utf-8")
 
 st.markdown(
     f"""
@@ -87,6 +93,9 @@ with reset:
     if st.button("Nova conversa", use_container_width=True):
         st.session_state.messages = []
         st.rerun()
+
+if upload_error:
+    st.error(upload_error)
 
 
 def show_sources(matches):
@@ -122,13 +131,13 @@ if not st.session_state.messages:
         )
         first, second = st.columns(2)
         with first:
-            if st.button("O que é aprendizagem ativa?", use_container_width=True):
+            if st.button("O que é aprendizagem ativa?", use_container_width=True, disabled=bool(upload_error)):
                 suggestion = "O que é aprendizagem ativa?"
         with second:
-            if st.button("Como funcionam as pistas graduais?", use_container_width=True):
+            if st.button("Como funcionam as pistas graduais?", use_container_width=True, disabled=bool(upload_error)):
                 suggestion = "Como funcionam as pistas graduais?"
 
-typed_prompt = st.chat_input("Escreva sua pergunta ou tentativa...")
+typed_prompt = st.chat_input("Escreva sua pergunta ou tentativa...", disabled=bool(upload_error))
 prompt = suggestion or typed_prompt
 
 if prompt:

@@ -17,4 +17,4 @@ A interface usa `assets/logo-cognitive.svg`, uma reprodução vetorial provisór
 
 No Streamlit Community Cloud, selecione o repositório `sabrinayokoyama1/cognitive-ai-v2`, a branch `main` e o arquivo `app.py`. Para ativar as respostas por GPT, configure `OPENAI_API_KEY` nos Secrets da aplicação. Nunca adicione a chave ao repositório. A API da OpenAI pode gerar custos de uso.
 
-O arquivo `cognitive_rag.ipynb` preserva o desenvolvimento em notebook. A base padrão está em `knowledge.txt`; a interface também aceita um arquivo `.txt` enviado pelo usuário.
+O arquivo `cognitive_rag.ipynb` preserva o desenvolvimento em notebook. A base padrão está em `knowledge.txt`. A interface aceita arquivos `.txt` em UTF-8 e `.pdf` com texto selecionável, até 20 MB. PDFs escaneados precisam de OCR antes do envio.
