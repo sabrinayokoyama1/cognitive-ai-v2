@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 import streamlit as st
+from openai import APIConnectionError, APIStatusError, AuthenticationError, NotFoundError, PermissionDeniedError, RateLimitError
 
 from document_loader import extract_document
 from rag_engine import answer
@@ -109,6 +110,25 @@ def show_sources(matches):
             st.write("Nenhum trecho relevante encontrado.")
 
 
+def api_error_message(exc):
+    """Traduz falhas conhecidas sem expor a chave ou detalhes da requisição."""
+    if isinstance(exc, AuthenticationError):
+        return "A OpenAI recusou a chave. Confira se ela foi copiada por inteiro e está ativa no projeto da API."
+    if isinstance(exc, RateLimitError):
+        if getattr(exc, "code", None) in {"insufficient_quota", "credit_balance_exhausted", "billing_hard_limit_reached"}:
+            return "A conta da API está sem créditos ou atingiu o limite de gastos. Confira o faturamento na OpenAI Platform."
+        return "A API atingiu um limite de uso. Aguarde um pouco e tente novamente."
+    if isinstance(exc, PermissionDeniedError):
+        return "A chave não tem permissão para usar este modelo. Confira o projeto e as permissões na OpenAI Platform."
+    if isinstance(exc, NotFoundError):
+        return "O modelo configurado não está disponível para este projeto da API."
+    if isinstance(exc, APIConnectionError):
+        return "Não foi possível conectar à API da OpenAI. Tente novamente em instantes."
+    if isinstance(exc, APIStatusError):
+        return f"A API da OpenAI respondeu com erro HTTP {exc.status_code}. Confira o projeto da API e tente novamente."
+    return "Não foi possível gerar a orientação. Verifique os registros da aplicação no Streamlit."
+
+
 for message in st.session_state.messages:
     avatar = str(LOGO) if message["role"] == "assistant" else None
     with st.chat_message(message["role"], avatar=avatar):
@@ -153,8 +173,8 @@ if prompt:
             with st.spinner("Preparando uma orientação..."):
                 try:
                     reply, matches = answer(prompt, document, history=previous)
-                except Exception:
-                    st.error("Não foi possível gerar a orientação agora. Verifique a conexão e a configuração da API.")
+                except Exception as exc:
+                    st.error(api_error_message(exc))
                 else:
                     reply = reply or "Não foi possível formular uma orientação para esta pergunta."
                     st.markdown(reply)
